@@ -25,7 +25,7 @@ from tqdm import tqdm
 
 
 # .env 파일 로드
-env_path = Path(__file__).parent / '.env'
+env_path = Path(__file__).parent.parent / '.env'
 logger.info(f"Loading environment variables from {env_path}")
 load_dotenv(dotenv_path=env_path)
 

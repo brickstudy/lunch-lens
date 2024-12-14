@@ -6,7 +6,6 @@ services:
     environment:
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://admin:admin1234@postgres:5432/airflow
-      - AIRFLOW__CORE__FERNET_KEY=YrGnYLvjT5IdkexUqRW39uoBYFbrg_qfwXT_JlRBTdY=
       - AIRFLOW__CORE__LOAD_EXAMPLES=False
       - AIRFLOW__LOGGING__LOGGING_LEVEL=INFO
       - AIRFLOW__LOGGING__LOGGING_LEVEL_ROOT=INFO
@@ -17,6 +16,8 @@ services:
       - AIRFLOW__LOGGING__DAG_FILE_PROCESSOR_LOG_TARGET=/opt/airflow/logs/dag_processor_manager/dag_processor_manager.log
       - AIRFLOW__LOGGING__DAG_PROCESSOR_MANAGER_LOG_TARGET=/opt/airflow/logs/dag_processor_manager/dag_processor_manager.log
       - AIRFLOW_CONN_LUNCH_LENS_DB=postgresql://admin:admin1234@postgres:5432/lunchlens
+    env_file:
+      - .env
     volumes:
       - ./dags:/opt/airflow/dags
       - ./logs:/opt/airflow/logs
@@ -40,7 +41,6 @@ services:
     environment:
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://admin:admin1234@postgres:5432/airflow
-      - AIRFLOW__CORE__FERNET_KEY=YrGnYLvjT5IdkexUqRW39uoBYFbrg_qfwXT_JlRBTdY=
       - AIRFLOW__CORE__LOAD_EXAMPLES=False
       - AIRFLOW__LOGGING__LOGGING_LEVEL=INFO
       - AIRFLOW__LOGGING__LOGGING_LEVEL_ROOT=INFO
@@ -51,6 +51,8 @@ services:
       - AIRFLOW__LOGGING__DAG_FILE_PROCESSOR_LOG_TARGET=/opt/airflow/logs/dag_processor_manager/dag_processor_manager.log
       - AIRFLOW__LOGGING__DAG_PROCESSOR_MANAGER_LOG_TARGET=/opt/airflow/logs/dag_processor_manager/dag_processor_manager.log
       - AIRFLOW_CONN_LUNCH_LENS_DB=postgresql://admin:admin1234@postgres:5432/lunchlens
+    env_file:
+      - .env
     volumes:
       - ./dags:/opt/airflow/dags
       - ./logs:/opt/airflow/logs
@@ -71,7 +73,6 @@ services:
     build: .
     environment:
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://admin:admin1234@postgres:5432/airflow
-      - AIRFLOW__CORE__FERNET_KEY=YrGnYLvjT5IdkexUqRW39uoBYFbrg_qfwXT_JlRBTdY=
       - AIRFLOW__CORE__LOAD_EXAMPLES=False
       - AIRFLOW__LOGGING__LOGGING_LEVEL=INFO
       - AIRFLOW__LOGGING__LOGGING_LEVEL_ROOT=INFO
@@ -86,6 +87,8 @@ services:
       - _AIRFLOW_WWW_USER_CREATE=true
       - _AIRFLOW_WWW_USER_USERNAME=airflow
       - _AIRFLOW_WWW_USER_PASSWORD=airflow
+    env_file:
+      - .env
     command: db init
     networks:
       - lunch-lens_lunchlens-network
