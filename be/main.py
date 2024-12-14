@@ -118,6 +118,13 @@ def log_food(food: FoodLogCreate, db: Session = Depends(get_db)):
     db.refresh(db_food_log)
     return db_food_log
 
+@app.get("/meal-history/{user_id}", response_model=List[FoodLogResponse])
+def get_meal_history(user_id: int, db: Session = Depends(get_db)):
+    logs = db.query(FoodLog).filter(
+        FoodLog.user_id == user_id
+    ).order_by(FoodLog.timestamp.desc()).all()
+    return logs
+
 @app.get("/recommend")
 def recommend(user_id: int, db: Session = Depends(get_db)):
     # 사용자의 최근 음식 기록 가져오기

@@ -47,14 +47,21 @@ if st.button("Get Recommendation"):
 
 # 섭취 이력 시각화 섹션
 st.header("View Your Meal History")
+
+# User ID 입력
+user_id = st.number_input("Enter your user ID", min_value=1, value=1, step=1)
+
 if st.button("Load Meal History"):
-    # FastAPI에서 섭초 이력 가져오기 (임시 데이터 사용)
-    # 실제 구현에서는 API로 데이터 호출
-    mock_data = [
-        {"food_name": "Kimchi Stew", "timestamp": "2024-12-10", "rating": 4},
-        {"food_name": "Pasta", "timestamp": "2024-12-11", "rating": 5},
-        {"food_name": "Samgyeopsal", "timestamp": "2024-12-12", "rating": 3},
-    ]
-    df = pd.DataFrame(mock_data)
-    st.table(df)
-    st.bar_chart(df.set_index("food_name")["rating"])
+    # FastAPI에서 식사 이력 가져오기
+    response = requests.get(f"{API_URL}/meal-history/{user_id}")
+    if response.status_code == 200:
+        meal_history = response.json()
+        df = pd.DataFrame(meal_history)
+        # timestamp를 datetime으로 변환
+        df['timestamp'] = pd.to_datetime(df['timestamp'])
+        # timestamp를 한국 시간으로 변환하고 날짜와 시간 표시
+        df['timestamp'] = df['timestamp'].dt.tz_convert('Asia/Seoul').dt.strftime('%Y-%m-%d %H:%M:%S')
+        st.table(df[['food_name', 'timestamp', 'rating']])
+        st.bar_chart(df.set_index("food_name")["rating"])
+    else:
+        st.error("Failed to load meal history")
