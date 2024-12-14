@@ -205,6 +205,27 @@ def process_food_info(food_info: FoodInfo, image_url: str, postgres_hook: Postgr
     
     return success_count, error_count
 
+def make_food_meta(food_names, image_urls, postgres_hook, category_mapping, llm):
+    success_count = 0
+    error_count = 0
+    try:
+        result = process_recipe_with_llm(food_names, llm)
+        
+        if result:
+            for food in result.food_list:
+                s_count, e_count = process_food_info(food, image_urls[food.recipe_name], postgres_hook, category_mapping)
+                success_count += s_count
+                error_count += e_count
+        else:
+            logger.error(f"LLM 처리 결과가 None")
+            error_count += 1
+        
+    except Exception as e:
+        logger.error(f"Error processing recipe batch: {str(e)}")
+        error_count += len(food_names)
+    
+    return success_count, error_count
+
 def process_recipe_batch(postgres_conn_id: str, **context) -> None:
     """레시피 배치 처리"""
     batch_num = context['ti'].xcom_pull(task_ids='get_batch_number')
@@ -218,65 +239,33 @@ def process_recipe_batch(postgres_conn_id: str, **context) -> None:
     category_mapping = get_category_mapping(postgres_hook)
     
     llm = ChatOpenAI(temperature=0, model_name="gpt-4")
-    # llm = ChatOllama(
-    #     model=MODEL_NAME,
-    #     base_url=MODEL_URL,
-    # )
     
-    food_names = set()
+    food_names = list()
     image_urls = dict()
     for recipe_id in tqdm(recipe_ids, desc="Processing recipes", total=len(recipe_ids)):
         url = f"https://www.10000recipe.com/recipe/{recipe_id}"
         
-        recipe_name, image_url = get_recipe_info(url)
-        if recipe_name:
-            food_names.add(recipe_name)
-            image_urls.update({recipe_name: image_url})
-            logger.info(f"{len(food_names)}: add {recipe_name} to food_names")
+        food_name, image_url = get_recipe_info(url)
+        if food_name:
+            food_names.append(food_name)
+            image_urls.update({food_name:image_url})
+            logger.info(f"{len(food_names)}: add {food_name}")
             # time.sleep(SLEEP_TIME)
         else:
             error_count += 1
         
         if len(food_names) < 50: continue
-        
-        try:
-            result = process_recipe_with_llm(list(food_names), llm)
-            
-            if result:
-                for food in result.food_list:
-                    s_count, e_count = process_food_info(food, image_urls[food.name], postgres_hook, category_mapping)
-                    success_count += s_count
-                    error_count += e_count
-            else:
-                logger.error(f"LLM 처리 결과가 None")
-                error_count += 1
-            
-        except Exception as e:
-            logger.error(f"Error processing recipe batch: {str(e)}")
-            error_count += 1
-        finally:
-            food_names.clear()
-            image_urls.clear()
+
+        _success_count, _error_count = make_food_meta(food_names, image_urls, postgres_hook, category_mapping, llm)
+
+        success_count += _success_count
+        error_count += _error_count
     
     if len(food_names) > 0:  # 레시피 정보를 전달하고 카테고리 분류
-        try:
-            result = process_recipe_with_llm(list(food_names), llm)
-            
-            if result:
-                for food in result.food_list:
-                    s_count, e_count = process_food_info(food, image_urls[food.name], postgres_hook, category_mapping)
-                    success_count += s_count
-                    error_count += e_count
-            else:
-                logger.error(f"LLM 처리 결과가 None")
-                error_count += 1
-            
-        except Exception as e:
-            logger.error(f"Error processing recipe batch: {str(e)}")
-            error_count += 1
-        finally:
-            food_names.clear()
-            image_urls.clear()
+        _success_count, _error_count = make_food_meta(food_names, image_urls, postgres_hook, category_mapping, llm)
+
+        success_count += _success_count
+        error_count += _error_count
     
     # 배치 처리 결과 요약
     success_rate = (success_count/len(recipe_ids))*100 if recipe_ids else 0
