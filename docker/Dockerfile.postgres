@@ -1,0 +1,19 @@
+FROM postgres:13.3-alpine
+
+# 환경 변수 설정
+ENV POSTGRES_DB=lunchlens
+ENV POSTGRES_USER=admin
+ENV POSTGRES_PASSWORD=admin1234
+ENV POSTGRES_INITDB_ARGS="--encoding=UTF-8"
+
+# 타임존 설정
+ENV TZ=Asia/Seoul
+
+# 초기화 스크립트를 복사
+COPY ./docker/init.sql /docker-entrypoint-initdb.d/
+
+# 데이터베이스 포트 노출
+EXPOSE 5432
+
+# 볼륨 설정
+VOLUME ["/var/lib/postgresql/data"]

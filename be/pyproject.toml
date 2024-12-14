@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "lunch-lens-be"
+version = "0.1.0"
+description = ""
+authors = ["GangBean <xbox2537@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+uvicorn = "^0.32.1"
+fastapi = "^0.115.6"
+sqlalchemy = "^2.0.36"
+pydantic = "^2.10.3"
+psycopg2-binary = "^2.9.10"
+langchain = "^0.3.11"
+langchain-teddynote = "^0.3.40"
+langchain-openai = "^0.2.12"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
