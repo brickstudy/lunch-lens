@@ -260,7 +260,7 @@ dag = DAG(
     'recipe_crawler',
     default_args=default_args,
     description='만개의 레시피 크롤링 DAG',
-    schedule_interval='*/5 * * * *',  # 5분마다 실행
+    schedule_interval='*/1 * * * *',  # 1분마다 실행
     start_date=datetime(2024, 1, 1),
     catchup=False,
     tags=['recipe', 'crawler'],
