@@ -20,6 +20,7 @@ soupsieve = "^2.6"
 urllib3 = "^2.2.3"
 langchain-teddynote = "^0.3.40"
 loguru = "^0.7.3"
+langchain-community = "^0.3.11"
 
 [build-system]
 requires = ["poetry-core"]

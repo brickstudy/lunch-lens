@@ -22,6 +22,7 @@ services:
       - ./dags:/opt/airflow/dags
       - ./logs:/opt/airflow/logs
       - ./plugins:/opt/airflow/plugins
+      - ./config:/opt/airflow/config
     ports:
       - "8080:8080"
     command: webserver
@@ -35,6 +36,8 @@ services:
         condition: service_completed_successfully
     networks:
       - lunch-lens_lunchlens-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   scheduler:
     build: .
@@ -57,6 +60,7 @@ services:
       - ./dags:/opt/airflow/dags
       - ./logs:/opt/airflow/logs
       - ./plugins:/opt/airflow/plugins
+      - ./config:/opt/airflow/config
     command: scheduler
     healthcheck:
       test: ["CMD-SHELL", "[ -f /opt/airflow/airflow-scheduler.pid ]"]
@@ -68,6 +72,8 @@ services:
         condition: service_completed_successfully
     networks:
       - lunch-lens_lunchlens-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   init:
     build: .
@@ -92,6 +98,8 @@ services:
     command: db init
     networks:
       - lunch-lens_lunchlens-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
 networks:
   lunch-lens_lunchlens-network:

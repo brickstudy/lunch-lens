@@ -1,0 +1,21 @@
+_type: prompt
+input_variables:
+  - count
+  - name_list
+  - format_instructions
+template: |
+  Given the {count} number of recipe titles, for each title,please:
+  1. Remove any unnecessary descriptive words and return just the main dish name
+  2. Classify the dish into one of these categories: 한식, 양식, 중식, 일식, 기타
+  3. Return the main dish name and its category
+  4. Aggregate all the main dish names and their categories into a list
+  5. If there are duplicates in the list, only return the first one
+
+  Example:
+  Input: ["김치찌개", "된장찌개", "파스타", "스테이크", "가츠동", "돈까스", "백종원의 초간단 매콤 닭볶음탕", "김치 갈비찜"]
+  then should return: {{"food_list": [{{"name": "김치찌개", "category": "한식"}}, {{"name": "된장찌개", "category": "한식"}}, {{"name": "파스타", "category": "한식"}}, {{"name": "스테이크", "category": "한식"}}, {{"name": "가츠동", "category": "한식"}}, {{"name": "돈까스", "category": "한식"}}, {{"name": "백종원의 초간단 매콤 닭볶음탕", "category": "한식"}}, {{"name": "김치 갈비찜", "category": "한식"}}]}}
+
+  Format:
+  {format_instructions}
+
+  Input: {name_list}
