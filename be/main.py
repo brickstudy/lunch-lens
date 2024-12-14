@@ -31,18 +31,24 @@ Base = declarative_base()
 llm = ChatOpenAI(temperature=0, model_name="gpt-4-turbo")
 
 # 데이터베이스 모델
+class FoodCategories(Base):
+    __tablename__ = "food_categories"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, index=True)
+
 class FoodMetadata(Base):
     __tablename__ = "food_metadata"
     id = Column(Integer, primary_key=True, index=True)
-    food_name = Column(String, unique=True, index=True)
-    category = Column(String)
+    name = Column(String, unique=True, index=True)
+    category_id = Column(Integer, ForeignKey("food_categories.id"))
+    image_url = Column(String)
     created_at = Column(DateTime(timezone=True))
 
 class FoodLog(Base):
     __tablename__ = "food_logs"
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer)
-    food_name = Column(String, ForeignKey("food_metadata.food_name"))
+    food_name = Column(String)
     rating = Column(Integer)
     timestamp = Column(DateTime(timezone=True), default=datetime.datetime.now)
 
@@ -75,8 +81,18 @@ class FoodCategory(BaseModel):
     food_name: str
     category: str
 
-def get_food_category(food_name: str) -> str:
-    categories = ["한식", "중식", "양식", "일식", "기타"]
+# 카테고리 캐시
+_food_categories = None
+
+def get_food_categories(db: Session) -> List[str]:
+    global _food_categories
+    if _food_categories is None:
+        categories = db.query(FoodCategories.name).distinct().all()
+        _food_categories = [category[0] for category in categories]
+    return _food_categories
+
+def get_food_category(food_name: str, db: Session = Depends(get_db)) -> str:
+    categories = get_food_categories(db)
     try:
         parser = PydanticOutputParser(pydantic_object=FoodCategory)
         prompt_template = PromptTemplate(
@@ -89,19 +105,24 @@ def get_food_category(food_name: str) -> str:
         return answer.category
     except Exception as e:
         raise e
-        # return "Unknown"
 
 @app.post("/log-food", response_model=FoodLogResponse)
 def log_food(food: FoodLogCreate, db: Session = Depends(get_db)):
     # 음식이 메타데이터에 있는지 확인
-    food_exists = db.query(FoodMetadata).filter(FoodMetadata.food_name == food.food_name).first()
+    food_exists = db.query(FoodMetadata).filter(FoodMetadata.name == food.food_name).first()
     
     # 메타데이터에 없는 경우 자동으로 카테고리 생성 후 추가
     if not food_exists:
-        category = get_food_category(food.food_name)
+        category = get_food_category(food.food_name, db)
+        new_food_category = db.query(FoodCategories).filter(FoodCategories.name == category).first()
+        if not new_food_category:
+            new_food_category = FoodCategories(name=category)
+            db.add(new_food_category)
+            db.commit()
+            db.refresh(new_food_category)
         new_food_metadata = FoodMetadata(
-            food_name=food.food_name,
-            category=category
+            name=food.food_name,
+            category_id=new_food_category.id
         )
         db.add(new_food_metadata)
         db.commit()
@@ -134,12 +155,16 @@ def recommend(user_id: int, db: Session = Depends(get_db)):
     
     # 최근에 먹지 않은 음식 중에서 추천
     recent_foods = {log.food_name for log in recent_logs}
-    available_foods = db.query(FoodMetadata).filter(
-        ~FoodMetadata.food_name.in_(recent_foods)
+    available_foods = db.query(FoodMetadata).join(
+        FoodCategories, FoodMetadata.category_id == FoodCategories.id
+    ).filter(
+        ~FoodMetadata.name.in_(recent_foods)
     ).all()
     
     if not available_foods:
-        available_foods = db.query(FoodMetadata).all()
+        available_foods = db.query(FoodMetadata).join(
+            FoodCategories, FoodMetadata.category_id == FoodCategories.id
+        ).all()
     
     recommended = random.choice(available_foods)
-    return {"recommended_food": recommended.food_name}
+    return {"recommended_food": recommended.name}
