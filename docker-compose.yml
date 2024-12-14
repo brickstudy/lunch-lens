@@ -1,0 +1,61 @@
+services:
+  postgres:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.postgres
+    container_name: lunchlens-postgres
+    environment:
+      - POSTGRES_DB=lunchlens
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=admin1234
+      - TZ=Asia/Seoul
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - lunchlens-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d lunchlens"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  fastapi:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.fastapi
+    container_name: lunchlens-fastapi
+    environment:
+      - DATABASE_URL=postgresql://admin:admin1234@postgres:5432/lunchlens
+      - TZ=Asia/Seoul
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - lunchlens-network
+
+  streamlit:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.streamlit
+    container_name: lunchlens-streamlit
+    environment:
+      - FASTAPI_URL=http://fastapi:8000
+      - TZ=Asia/Seoul
+    ports:
+      - "8501:8501"
+    depends_on:
+      - fastapi
+    networks:
+      - lunchlens-network
+
+volumes:
+  postgres_data:
+
+networks:
+  lunchlens-network:
+    driver: bridge
