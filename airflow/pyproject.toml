@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "airflow"
+version = "0.1.0"
+description = ""
+authors = ["GangBean <xbox2537@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.12"
+apache-airflow-providers-postgres = "^5.14.0"
+beautifulsoup4 = "^4.12.3"
+requests = "^2.32.3"
+langchain = "^0.3.11"
+langchain-openai = "^0.2.12"
+pydantic = "^2.10.3"
+openai = "^1.57.4"
+bs4 = "^0.0.2"
+python-dotenv = "^1.0.1"
+soupsieve = "^2.6"
+urllib3 = "^2.2.3"
+langchain-teddynote = "^0.3.40"
+loguru = "^0.7.3"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -51,3 +51,18 @@ ON CONFLICT (name) DO NOTHING;
 -- 필요한 권한 부여
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO admin;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO admin;
+
+-- Airflow 데이터베이스 생성
+CREATE DATABASE airflow;
+GRANT ALL PRIVILEGES ON DATABASE airflow TO admin;
+
+-- 레시피 크롤러 상태 테이블
+CREATE TABLE IF NOT EXISTS crawler_state (
+    id SERIAL PRIMARY KEY,
+    key VARCHAR(255) UNIQUE,
+    value INTEGER
+);
+
+-- 필요한 권한 부여
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO admin;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO admin;

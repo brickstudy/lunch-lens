@@ -1,0 +1,95 @@
+version: '3'
+
+services:
+  webserver:
+    build: .
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://admin:admin1234@postgres:5432/airflow
+      - AIRFLOW__CORE__FERNET_KEY=YrGnYLvjT5IdkexUqRW39uoBYFbrg_qfwXT_JlRBTdY=
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW__LOGGING__LOGGING_LEVEL=INFO
+      - AIRFLOW__LOGGING__LOGGING_LEVEL_ROOT=INFO
+      - AIRFLOW__LOGGING__LOGGING_LEVEL_AIRFLOW=INFO
+      - AIRFLOW__LOGGING__LOGGING_LEVEL_AIRFLOW_TASK=INFO
+      - AIRFLOW__LOGGING__HANDLER_CLASS=airflow.utils.log.file_task_handler.FileTaskHandler
+      - AIRFLOW__LOGGING__BASE_LOG_FOLDER=/opt/airflow/logs
+      - AIRFLOW__LOGGING__DAG_FILE_PROCESSOR_LOG_TARGET=/opt/airflow/logs/dag_processor_manager/dag_processor_manager.log
+      - AIRFLOW__LOGGING__DAG_PROCESSOR_MANAGER_LOG_TARGET=/opt/airflow/logs/dag_processor_manager/dag_processor_manager.log
+      - AIRFLOW_CONN_LUNCH_LENS_DB=postgresql://admin:admin1234@postgres:5432/lunchlens
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+    ports:
+      - "8080:8080"
+    command: webserver
+    healthcheck:
+      test: ["CMD-SHELL", "[ -f /opt/airflow/airflow-webserver.pid ]"]
+      interval: 30s
+      timeout: 30s
+      retries: 3
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    networks:
+      - lunch-lens_lunchlens-network
+
+  scheduler:
+    build: .
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://admin:admin1234@postgres:5432/airflow
+      - AIRFLOW__CORE__FERNET_KEY=YrGnYLvjT5IdkexUqRW39uoBYFbrg_qfwXT_JlRBTdY=
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW__LOGGING__LOGGING_LEVEL=INFO
+      - AIRFLOW__LOGGING__LOGGING_LEVEL_ROOT=INFO
+      - AIRFLOW__LOGGING__LOGGING_LEVEL_AIRFLOW=INFO
+      - AIRFLOW__LOGGING__LOGGING_LEVEL_AIRFLOW_TASK=INFO
+      - AIRFLOW__LOGGING__HANDLER_CLASS=airflow.utils.log.file_task_handler.FileTaskHandler
+      - AIRFLOW__LOGGING__BASE_LOG_FOLDER=/opt/airflow/logs
+      - AIRFLOW__LOGGING__DAG_FILE_PROCESSOR_LOG_TARGET=/opt/airflow/logs/dag_processor_manager/dag_processor_manager.log
+      - AIRFLOW__LOGGING__DAG_PROCESSOR_MANAGER_LOG_TARGET=/opt/airflow/logs/dag_processor_manager/dag_processor_manager.log
+      - AIRFLOW_CONN_LUNCH_LENS_DB=postgresql://admin:admin1234@postgres:5432/lunchlens
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+    command: scheduler
+    healthcheck:
+      test: ["CMD-SHELL", "[ -f /opt/airflow/airflow-scheduler.pid ]"]
+      interval: 30s
+      timeout: 30s
+      retries: 3
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    networks:
+      - lunch-lens_lunchlens-network
+
+  init:
+    build: .
+    environment:
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://admin:admin1234@postgres:5432/airflow
+      - AIRFLOW__CORE__FERNET_KEY=YrGnYLvjT5IdkexUqRW39uoBYFbrg_qfwXT_JlRBTdY=
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW__LOGGING__LOGGING_LEVEL=INFO
+      - AIRFLOW__LOGGING__LOGGING_LEVEL_ROOT=INFO
+      - AIRFLOW__LOGGING__LOGGING_LEVEL_AIRFLOW=INFO
+      - AIRFLOW__LOGGING__LOGGING_LEVEL_AIRFLOW_TASK=INFO
+      - AIRFLOW__LOGGING__HANDLER_CLASS=airflow.utils.log.file_task_handler.FileTaskHandler
+      - AIRFLOW__LOGGING__BASE_LOG_FOLDER=/opt/airflow/logs
+      - AIRFLOW__LOGGING__DAG_FILE_PROCESSOR_LOG_TARGET=/opt/airflow/logs/dag_processor_manager/dag_processor_manager.log
+      - AIRFLOW__LOGGING__DAG_PROCESSOR_MANAGER_LOG_TARGET=/opt/airflow/logs/dag_processor_manager/dag_processor_manager.log
+      - AIRFLOW_CONN_LUNCH_LENS_DB=postgresql://admin:admin1234@postgres:5432/lunchlens
+      - _AIRFLOW_DB_MIGRATE=true
+      - _AIRFLOW_WWW_USER_CREATE=true
+      - _AIRFLOW_WWW_USER_USERNAME=airflow
+      - _AIRFLOW_WWW_USER_PASSWORD=airflow
+    command: db init
+    networks:
+      - lunch-lens_lunchlens-network
+
+networks:
+  lunch-lens_lunchlens-network:
+    external: true
