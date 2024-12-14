@@ -21,49 +21,15 @@ from langchain.output_parsers import PydanticOutputParser
 from langchain_teddynote import logging
 from pydantic import BaseModel
 from loguru import logger
+from tqdm import tqdm
 
-# Airflow의 로그 파일에도 loguru 로그가 기록되도록 설정
-logger.remove()  # 기존 핸들러 제거
-
-# 시그널 핸들러 설정
-def handle_signal(signum, frame):
-    logger.info(f"Received signal {signum}. Cleaning up...")
-    sys.exit(0)
-
-signal.signal(signal.SIGTERM, handle_signal)
-signal.signal(signal.SIGINT, handle_signal)
-
-# stdout 핸들러
-logger.add(
-    sys.stdout,
-    format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
-    level="INFO",
-    enqueue=True  # 비동기 로깅 활성화
-)
-
-# 파일 핸들러
-log_file = "/opt/airflow/logs/dag_processor_manager/task_logs.log"
-logger.add(
-    log_file,
-    rotation="500 MB",
-    retention="10 days",
-    format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
-    level="INFO",
-    enqueue=True,  # 비동기 로깅 활성화
-    catch=True     # 예외 발생 시에도 계속 실행
-)
-
-# 종료 시 정리
-@atexit.register
-def cleanup():
-    logger.info("Shutting down logger...")
-    logger.complete()
 
 # .env 파일 로드
 env_path = Path(__file__).parent / '.env'
-if env_path.exists():
-    load_dotenv(env_path)
+logger.info(f"Loading environment variables from {env_path}")
+load_dotenv(dotenv_path=env_path)
 
+logging.langsmith("lunch-lens", "0.1.0")
 # 기본 설정
 default_args = {
     'owner': 'airflow',
@@ -77,7 +43,7 @@ default_args = {
 
 # 상수 정의
 BASE_URL = "https://www.10000recipe.com/recipe/"
-BATCH_SIZE = 1000  # 한 번에 처리할 레시피 수
+BATCH_SIZE = 100_000  # 한 번에 처리할 레시피 수
 SLEEP_TIME = 1  # 요청 간 대기 시간(초)
 
 class FoodInfo(BaseModel):
@@ -86,47 +52,51 @@ class FoodInfo(BaseModel):
 
 def generate_recipe_ids(batch_num: int) -> List[str]:
     """100개의 레시피 ID 생성"""
-    start = batch_num * 100
-    return [str(i).zfill(7) for i in range(start, start + 100)]
+    start = batch_num * BATCH_SIZE
+    return [str(i).zfill(7) for i in range(start, start + BATCH_SIZE)]
 
-def get_recipe_name(url: str) -> str:
-    """레시피 페이지에서 레시피 이름 추출"""
+def get_recipe_info(url: str) -> tuple[Optional[str], Optional[str]]:
+    """레시피 페이지에서 레시피 이름과 이미지 URL 추출"""
     try:
         response = requests.get(url)
         if response.status_code == 200:
             soup = BeautifulSoup(response.text, 'html.parser')
             recipe_title = soup.select_one('.view2_summary.st3 h3')
-            if recipe_title:
-                return recipe_title.text.strip()
-            logger.info(f"Recipe title not found at {url}")
+            recipe_image = soup.select_one('#main_thumbs')
+            
+            title = recipe_title.text.strip() if recipe_title else None
+            image_url = recipe_image.get('src') if recipe_image else None
+            
+            # if not title:
+            #     logger.info(f"Recipe title not found at {url}")
+            # if not image_url:
+            #     logger.info(f"Recipe image not found at {url}")
+                
+            return title, image_url
         else:
             logger.info(f"Failed to fetch recipe from {url}: Status code {response.status_code}")
     except Exception as e:
         logger.info(f"Error fetching recipe from {url}: {str(e)}")
-    return None
+    return None, None
 
-def process_recipe_with_llm(recipe_name: str, llm) -> FoodInfo:
+def process_recipe_with_llm(name: str, llm) -> FoodInfo:
     """LLM을 사용하여 레시피 이름을 정제하고 카테고리 분류"""
     parser = PydanticOutputParser(pydantic_object=FoodInfo)
+    
+    template_path = Path(__file__).parent / 'templates' / 'categorize_food_template'
+    with open(template_path, 'r', encoding='utf-8') as f:
+        template_content = f.read()
+    
     prompt = PromptTemplate(
-        template="""Given the recipe title '{recipe_name}', please:
-1. Remove any unnecessary descriptive words and return just the main dish name
-2. Classify it into one of these categories: 한식, 양식, 중식, 일식, 기타
-
-Format the response as:
-{format_instructions}
-
-Example:
-Input: "백종원의 초간단 매콤 닭볶음탕"
-Output:
-{{"name": "닭볶음탕", "category": "한식"}}""",
-        input_variables=["recipe_name"],
+        template=template_content,
+        input_variables=["name"],
         partial_variables={"format_instructions": parser.get_format_instructions()},
     )
     
     try:
-        result = llm(prompt.format(recipe_name=recipe_name))
-        return parser.parse(result)
+        food_info = (prompt | llm | parser).invoke({"name": name})
+        logger.info(f"LLM 프로세싱 결과: {food_info}")
+        return food_info
     except Exception as e:
         logger.info(f"Error processing recipe with LLM: {str(e)}")
         return None
@@ -184,14 +154,13 @@ def process_recipe_batch(postgres_conn_id: str, **context) -> None:
     postgres_hook = PostgresHook(postgres_conn_id=postgres_conn_id)
     llm = ChatOpenAI(temperature=0, model_name="gpt-4")
     
-    for i, recipe_id in enumerate(recipe_ids, 1):
+    for recipe_id in tqdm(recipe_ids, desc="Processing recipes", total=len(recipe_ids)):
         url = f"https://www.10000recipe.com/recipe/{recipe_id}"
-        logger.info(f"[{i}/{len(recipe_ids)}] Processing recipe ID {recipe_id}")
         
-        recipe_name = get_recipe_name(url)
+        recipe_name, image_url = get_recipe_info(url)
         if recipe_name:
             try:
-                logger.info(f"Found recipe: {recipe_name}")
+                # logger.info(f"Found recipe: {recipe_name}")
                 result = process_recipe_with_llm(recipe_name, llm)
                 
                 if result:
@@ -202,38 +171,65 @@ def process_recipe_batch(postgres_conn_id: str, **context) -> None:
                     ON CONFLICT (name) DO NOTHING
                     RETURNING id;
                     """
-                    category_id = postgres_hook.get_first(
+                    # logger.info(f"Executing category query with category: {result.category}")
+                    category_result = postgres_hook.get_first(
                         category_query, 
                         parameters=(result.category,)
-                    )[0]
-                    
-                    # 음식 메타데이터 추가
-                    metadata_query = """
-                    INSERT INTO food_metadata (name, category_id, image_url)
-                    VALUES (%s, %s, %s)
-                    ON CONFLICT (name) DO NOTHING;
-                    """
-                    postgres_hook.run(
-                        metadata_query,
-                        parameters=(
-                            result.name,
-                            category_id,
-                            url
-                        )
                     )
+                    # logger.info(f"Category query result: {category_result}")
                     
-                    logger.info(f"Successfully processed recipe {recipe_id}: {result.name} ({result.category})")
-                    success_count += 1
+                    if not category_result:
+                        # 이미 존재하는 카테고리의 ID 가져오기
+                        category_result = postgres_hook.get_first(
+                            "SELECT id FROM food_categories WHERE name = %s",
+                            parameters=(result.category,)
+                        )
+                        logger.info(f"Retrieved existing category ID: {category_result}")
+                    
+                    category_id = category_result[0] if category_result else None
+                    
+                    if category_id:
+                        # 음식 메타데이터 추가
+                        metadata_query = """
+                        INSERT INTO food_metadata (name, category_id, image_url)
+                        VALUES (%s, %s, %s)
+                        ON CONFLICT (name) DO UPDATE SET
+                            category_id = EXCLUDED.category_id,
+                            image_url = EXCLUDED.image_url
+                        RETURNING id;
+                        """
+                        # logger.info(f"Executing metadata query with values: name={result.name}, category_id={category_id}, image_url={image_url}")
+                        try:
+                            metadata_result = postgres_hook.get_first(
+                                metadata_query,
+                                parameters=(
+                                    result.name,
+                                    category_id,
+                                    image_url
+                                )
+                            )
+                            # logger.info(f"Metadata query result: {metadata_result}")
+                            
+                            if metadata_result:
+                                # logger.info(f"Successfully processed recipe {recipe_id}: {result.name} ({result.category})")
+                                success_count += 1
+                            else:
+                                logger.info(f"Failed to insert/update metadata for recipe {recipe_id}")
+                                error_count += 1
+                        except Exception as e:
+                            logger.error(f"Database error while inserting metadata: {str(e)}")
+                            error_count += 1
+                    else:
+                        logger.error(f"Failed to get category_id for category: {result.category}")
+                        error_count += 1
                 else:
-                    logger.info(f"LLM processing failed for recipe {recipe_id}")
+                    logger.error(f"LLM 처리 결과가 None {recipe_id}: {result.name} ({result.category})")
                     error_count += 1
                 
                 time.sleep(SLEEP_TIME)
             except Exception as e:
-                logger.info(f"Error processing recipe {recipe_id}: {str(e)}")
                 error_count += 1
         else:
-            logger.info(f"Recipe {recipe_id} not found or not accessible")
             error_count += 1
         
     
@@ -258,36 +254,36 @@ def process_recipe_batch(postgres_conn_id: str, **context) -> None:
     """, parameters=(batch_num,))
 
 # DAG 정의
-dag = DAG(
-    'recipe_crawler',
+with DAG(
+    dag_id='recipe_crawler',
     default_args=default_args,
     description='만개의 레시피 크롤링 DAG',
-    schedule_interval='*/1 * * * *',  # 1분마다 실행
+    schedule_interval='* * * * *',  # 매분 실행 (*/1과 동일)
     start_date=datetime(2024, 1, 1),
     catchup=False,
+    max_active_runs=1,  # 동시에 하나의 DAG 인스턴스만 실행
     tags=['recipe', 'crawler'],
-)
+) as dag:
+    # 배치 번호 가져오기
+    get_batch_number = PythonOperator(
+        task_id='get_batch_number',
+        python_callable=get_next_batch_number,
+        op_kwargs={
+            'postgres_conn_id': 'lunch_lens_db'
+        },
+        provide_context=True,
+        dag=dag,
+    )
 
-# 배치 번호 가져오기
-get_batch_number = PythonOperator(
-    task_id='get_batch_number',
-    python_callable=get_next_batch_number,
-    op_kwargs={
-        'postgres_conn_id': 'lunch_lens_db'
-    },
-    provide_context=True,
-    dag=dag,
-)
+    # 레시피 처리
+    process_batch = PythonOperator(
+        task_id='process_recipe_batch',
+        python_callable=process_recipe_batch,
+        op_kwargs={
+            'postgres_conn_id': 'lunch_lens_db'
+        },
+        provide_context=True,
+        dag=dag,
+    )
 
-# 레시피 처리
-process_batch = PythonOperator(
-    task_id='process_recipe_batch',
-    python_callable=process_recipe_batch,
-    op_kwargs={
-        'postgres_conn_id': 'lunch_lens_db'
-    },
-    provide_context=True,
-    dag=dag,
-)
-
-get_batch_number >> process_batch
+    get_batch_number >> process_batch

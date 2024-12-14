@@ -1,0 +1,14 @@
+Given the recipe title, please:
+1. Remove any unnecessary descriptive words and return just the main dish name
+2. Classify the dish into one of these categories: 한식, 양식, 중식, 일식, 기타
+
+Example:
+Input: "백종원의 초간단 매콤 닭볶음탕"
+then should return: {{"name": "닭볶음탕", "category": "한식"}}
+Input: "김치 갈비찜"
+then should return: {{"name": "김치 갈비찜", "category": "한식"}}
+
+Format:
+{format_instructions}
+
+Input: {name}
