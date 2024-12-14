@@ -240,13 +240,15 @@ def process_recipe_batch(postgres_conn_id: str, **context) -> None:
     # 배치 처리 결과 요약
     success_rate = (success_count/len(recipe_ids))*100 if recipe_ids else 0
     
-    logger.info("=== Batch Processing Summary ===")
-    logger.info(f"[BATCH {batch_num}] Processing completed")
-    logger.info(f"[STATS] Total recipes: {len(recipe_ids)}")
-    logger.info(f"[STATS] Success count: {success_count}")
-    logger.info(f"[STATS] Error count: {error_count}")
-    logger.info(f"[STATS] Success rate: {success_rate:.2f}%")
-    logger.info("==============================")
+    logger.info(f"""
+=== Batch Processing Summary ===
+[BATCH {batch_num}] Processing completed
+[STATS] Total recipes: {len(recipe_ids)}
+[STATS] Success count: {success_count}
+[STATS] Error count: {error_count}
+[STATS] Success rate: {success_rate:.2f}%
+==============================
+    """.strip())
     
     # 현재 배치 번호를 DB에 저장
     postgres_hook.run("""
