@@ -213,7 +213,7 @@ def make_food_meta(food_names, image_urls, postgres_hook, category_mapping, llm)
         
         if result:
             for food in result.food_list:
-                s_count, e_count = process_food_info(food, image_urls[food.recipe_name], postgres_hook, category_mapping)
+                s_count, e_count = process_food_info(food, image_urls[food["recipe_name"]], postgres_hook, category_mapping)
                 success_count += s_count
                 error_count += e_count
         else:

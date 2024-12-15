@@ -13,8 +13,8 @@ template: |
   6. You also shoud map origin recipe title
 
   Example:
-  Input: ["맛있는 김치찌개", "어머니의 된장찌개", "미슐랭 3스타의 파스타", "기가 막힌 스테이크", "일본 장인의 가츠동", "부자동 돈까스", "백종원의 초간단 매콤 닭볶음탕", "아빠가 만든 김치 갈비찜"]
-  then should return: {{"food_list": [{{"recipe_name": "맛있는 김치찌개", "name": "김치찌개", "category": "한식"}}, {{"recipe_name": "어머니의 된장찌개", "name": "된장찌개", "category": "한식"}}, {{"recipe_name": "미슐랭 3스타의 파스타", "name": "파스타", "category": "한식"}}, {{"recipe_name": "스테이크", "name": "스테이크", "category": "한식"}}, {{"recipe_name": "일본 장인의 가츠동", "name": "가츠동", "category": "한식"}}, {{"recipe_name": "부자동 돈까스", "name": "돈까스", "category": "한식"}}, {{"recipe_name": "백종원의 초간단 매콤 닭볶음탕", "name": "닭볶음탕", "category": "한식"}}, {{"recipe_name": "아빠가 만든 김치 갈비찜", "name": "김치 갈비찜", "category": "한식"}}]}}
+  If Input is ["맛있는 김치찌개", "어머니의 된장찌개", "미슐랭 3스타의 파스타", "기가 막힌 스테이크", "일본 장인의 가츠동", "부자동 돈까스", "백종원의 초간단 매콤 닭볶음탕", "아빠가 만든 김치 갈비찜"],
+  then should return {{"food_list": [{{"recipe_name": "맛있는 김치찌개", "name": "김치찌개", "category": "한식"}}, {{"recipe_name": "어머니의 된장찌개", "name": "된장찌개", "category": "한식"}}, {{"recipe_name": "미슐랭 3스타의 파스타", "name": "파스타", "category": "한식"}}, {{"recipe_name": "스테이크", "name": "스테이크", "category": "한식"}}, {{"recipe_name": "일본 장인의 가츠동", "name": "가츠동", "category": "한식"}}, {{"recipe_name": "부자동 돈까스", "name": "돈까스", "category": "한식"}}, {{"recipe_name": "백종원의 초간단 매콤 닭볶음탕", "name": "닭볶음탕", "category": "한식"}}, {{"recipe_name": "아빠가 만든 김치 갈비찜", "name": "김치 갈비찜", "category": "한식"}}]}}
 
   Format:
   {format_instructions}
