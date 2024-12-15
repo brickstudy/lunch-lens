@@ -84,7 +84,7 @@ def process_recipe_with_llm(name_list: list[str], llm) -> FoodInfoList:
     prompt = load_prompt("./dags/prompts/categorize_food.yaml").partial(format_instructions=parser.get_format_instructions())
 
     try:
-        food_info = (prompt | llm | parser).invoke({"name_list": name_list})
+        food_info = (prompt | llm | parser).invoke({"name_list": name_list, "count": len(name_list)})
         logger.info(f"LLM 프로세싱 결과: {food_info}")
         return food_info
     except Exception as e:
