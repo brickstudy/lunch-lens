@@ -168,3 +168,8 @@ def recommend(user_id: int, db: Session = Depends(get_db)):
     
     recommended = random.choice(available_foods)
     return {"recommended_food": recommended.name}
+
+@app.get("/foods")
+def get_food_list(db: Session = Depends(get_db)):
+    food_list = [food[0] for food in db.query(FoodMetadata.name).filter(FoodMetadata.name.isnot(None)).distinct().all()]
+    return {"food_list": food_list}

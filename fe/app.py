@@ -6,6 +6,20 @@ from datetime import datetime
 # FastAPI 서버 URL
 API_URL = "http://fastapi:8000"
 
+FOOD_LIST = None
+
+def fetch_all_foods():
+    global FOOD_LIST
+    if FOOD_LIST: return FOOD_LIST
+    response = requests.get(f"{API_URL}/foods")
+    if response.status_code == 200:
+        foods = response.json().get("food_list", None)
+        FOOD_LIST = foods
+    else:
+        st.error("Failed to fetch food list.")
+        return []
+    return FOOD_LIST
+
 # Streamlit 앱 설정
 st.set_page_config(page_title="Personalized Lunch Recommendation", layout="centered")
 st.title("Personalized Lunch Recommendation Service")
@@ -14,7 +28,7 @@ st.title("Personalized Lunch Recommendation Service")
 st.header("Log Your Meal")
 with st.form("log_form"):
     user_id = st.number_input("User ID", min_value=1, step=1)
-    food_name = st.text_input("Food Name")
+    food_name = st.selectbox("Food Name", options=fetch_all_foods())
     rating = st.slider("Rating (1-5)", min_value=1, max_value=5, value=3)
     timestamp = datetime.now()
     submitted = st.form_submit_button("Log Meal")
