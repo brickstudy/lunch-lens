@@ -191,3 +191,18 @@ C3 -->|ETL/ELT| E1
 C3 -->|ETL/ELT| E2
 B --> E2
 ```
+
+## Data Pipeline
+### 1. Web crawling pipeline
+```Mermaid
+flowchart TD
+    Start[Start: Trigger Crawl Job] --> FetchHTML[Fetch HTML]
+    FetchHTML --> ParseHTML[Parse HTML with BeautifulSoup]
+    ParseHTML --> CheckDuplication[Check for Duplicates in DB]
+    CheckDuplication -->|New Data| ProcessData[Process & Normalize Data]
+    ProcessData --> SaveData[Save Data to Database]
+    CheckDuplication -->|Duplicate Data| Skip[Skip and Log Skipped URL]
+    SaveData --> LogHistory[Log Crawling History]
+    Skip --> LogHistory
+    LogHistory --> End[End: Job Complete]
+```
