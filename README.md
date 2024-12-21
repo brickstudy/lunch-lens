@@ -206,3 +206,28 @@ flowchart TD
     Skip --> LogHistory
     LogHistory --> End[End: Job Complete]
 ```
+### 2. Inference pipeline
+```Mermaid
+flowchart TD
+    Start[Start: User clicks 'Recommend'] --> API[API Gateway / FastAPI]
+    API --> Auth[JWT Authentication]
+    Auth --> Validate[Input Validation]
+    Validate --> Context[Fetch Context Data from DB]
+    Context --> Prepare[Prepare Model Input]
+    Prepare --> Model[Call LLM API / Recommendation Model]
+    Model --> PostProcess[Post-process Model Output]
+    PostProcess --> Cache[Optional: Cache Results]
+    Cache --> Response[Return API Response]
+```
+
+### 3. Feedback pipeline
+```Mermaid
+flowchart TD
+    Start[User Interaction] -->|Explicit: Like/Dislike| ExplicitAPI[Explicit Feedback API]
+    Start -->|Implicit: Click/Scroll| ImplicitAPI[Implicit Feedback API]
+    ExplicitAPI --> SaveExplicit[Save to Explicit Feedback Table]
+    ImplicitAPI --> SaveImplicit[Save to Implicit Feedback Table]
+    SaveExplicit --> Analyze[Analyze Feedback Data]
+    SaveImplicit --> Analyze
+    Analyze --> UpdateModel[Update Recommendation Model]
+```
