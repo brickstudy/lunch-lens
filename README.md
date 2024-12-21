@@ -136,3 +136,58 @@ erDiagram
     MEMBER_FEEDBACK }o--|| FEEDBACK_TYPE : "N:1"
     UNIT }o--|| UNIT : "N:1"
 ```
+
+## Architecture
+```Mermaid
+flowchart LR
+
+subgraph FE[Frontend]
+    A[React / Streamlit]
+end
+
+subgraph BE[Backend]
+    B[FastAPI Service]
+end
+
+subgraph DataPipeline[Airflow Cluster]
+    C1[Airflow Web]
+    C2[Scheduler]
+    C3[Worker]
+end
+
+subgraph Model[Model Containers]
+    D1[Training Container]
+    D2[Inference Container]
+end
+
+subgraph DBs[Databases]
+    E1[Service DB]
+    E2[AI DB]
+end
+
+subgraph ObjectStore[Object Storage]
+    F1[(Prompts)]
+    F2[(Model Artifacts)]
+    F3[(Inference I/O)]
+    F4[(Training I/O)]
+end
+
+A -->|User Request| B
+B -->|Reads/Writes| E1
+B --> D2
+D2 -->|Load/Save Artifacts| ObjectStore
+D1 -->|Store Model Output| F2
+D1 -->|Load/Save Data| E1
+D1 --> E2
+D1 --> |Log Training|F4
+D2 -->|Load Model| F2
+D2 -->|Log Inference| F3
+C3 --> D1
+C3 --> D2
+C1 --> C2
+C2 --> C3
+E1 --> E2
+C3 -->|ETL/ELT| E1
+C3 -->|ETL/ELT| E2
+B --> E2
+```
